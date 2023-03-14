@@ -19,6 +19,12 @@ parser.add_argument(
     default='/home/anastasia/personal/mnt/patata/datasets/navigine/mocab/apriltag/Azure/mocap',
     help="root directory of the dataset where the depth and rgb images are located",
 )
+parser.add_argument(
+    "--percent_to_delete",
+    type=str,
+    default= "0.3, 0.7",
+    help="Percent of points to delete up and down to delete floor and ceiling",
+)
 
 def run_FGraph(x):
 
@@ -108,6 +114,8 @@ def get_pcd(root_folder, camera_matrix, idx):
 
 if __name__ == '__main__':
     args = parser.parse_args()   
+    args.percent_to_delete = [float(x) for x in args.percent_to_delete.split()]
+    print(args.percent_to_delete)
 
     camera_intrinsic = np.array([[953.95397949, 0, 958.03153013], [0, 941.55212402, 552.51219511], [0, 0, 1]])
 
@@ -153,9 +161,18 @@ if __name__ == '__main__':
     Points_ = list()
     Colors_ = list()
     print('cropping points too keep only wall s')
+
+    z_min = z.min()
+    z_max = z.max()
+    z_range = z_max - z_min
+    p_0, p_1 = args.percent_to_delete # 0.3, 0.7],
+
     for z_, point, color in zip(tqdm(z), points, colors):
         ## specify z-axis threshold to remove top and down points 
-        if z_ < 0.8 * z.max() and z_ > 0.2 * z.min():
+        # if z_ < args.percent_to_delete[0] * z.max() and z_ > args.percent_to_delete[1] * z.min():
+        #     Points_.append(point)
+        #     Colors_.append(color)
+        if z_ < z_min + (p_1 * z_range) and z_ > z_min + (p_0 * z_range):
             Points_.append(point)
             Colors_.append(color)
 
@@ -166,7 +183,7 @@ if __name__ == '__main__':
     aligned_map_rect.points = o3d.utility.Vector3dVector(points_)
     aligned_map_rect.colors = o3d.utility.Vector3dVector(colors_)
 
-    o3d.visualization.draw_geometries([aligned_map_rect], window_name='aligned_map_rect')
+    # o3d.visualization.draw_geometries([aligned_map_rect], window_name='aligned_map_rect')
 
     print(f'writng to: {args.root_folder}')
 
